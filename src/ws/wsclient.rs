@@ -11,7 +11,7 @@ use tokio::{net::TcpStream, time::timeout as tout};
 #[allow(unused_imports)]
 use tokio_tungstenite::{
     connect_async, connect_async_with_config,
-    tungstenite::{client::IntoClientRequest, protocol::Message},
+    tungstenite::{client, client::IntoClientRequest, protocol::Message},
 };
 
 pub fn parse_timeout(timeout: u64) -> Result<Duration, Error> {
@@ -247,11 +247,12 @@ impl WsClient {
     }
 
     pub fn start(&mut self) {
-        let url_obj = url::Url::parse(&self.url).unwrap();
+        let url = self.url.clone();
+        let url_obj = http::Uri::from_static(Box::leak(url.into_boxed_str()));
         let (stdin_tx, stdin_rx) = futures_channel::mpsc::unbounded();
         *self.tx.lock().unwrap() = Some(stdin_tx.clone());
 
-        let func = |url: url::Url,
+        let func = |url: http::Uri,
                     stdin_rx: futures_channel::mpsc::UnboundedReceiver<Message>,
                     client: Self| async move {
             // info!("url: {:?}", url);
